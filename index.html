@@ -113,12 +113,12 @@
     <script>
         $(document).ready(function() {
             let receitaCorreta = "";
-            let revealedIngredients = 1;
-            let revealedInstructions = 1;
+            let revealedIngredients = 0;
+            let revealedInstructions = 0;
             let receitas = [];
 
-            // Carregar as receitas do arquivo JSON
-            $.getJSON('recipes.json', function(data) {
+            // Carregar as receitas do arquivo JSON hospedado no GitHub
+            $.getJSON('https://raw.githubusercontent.com/Aramunii/Qual-A-comida/main/recipes.json', function(data) {
                 receitas = data;
                 novoJogo();
             });
@@ -148,11 +148,26 @@
 
             // Função para buscar sugestões
             function buscarSugestoes(termo) {
-                const sugestoes = receitas.filter(receita => 
-                    receita.title.toLowerCase().includes(termo.toLowerCase())
-                );
+                const termoLower = termo.toLowerCase();
+                const sugestoes = receitas
+                    .filter(receita => receita.title.toLowerCase().includes(termoLower))
+                    .sort((a, b) => {
+                        // Prioriza títulos que começam com o termo de busca
+                        const aStartsWith = a.title.toLowerCase().startsWith(termoLower);
+                        const bStartsWith = b.title.toLowerCase().startsWith(termoLower);
+                        if (aStartsWith && !bStartsWith) return -1;
+                        if (!aStartsWith && bStartsWith) return 1;
+                        return a.title.localeCompare(b.title); // Ordena alfabeticamente se empate
+                    })
+                    .reduce((acc, receita) => {
+                        if (!acc.some(r => r.title === receita.title) && acc.length < 5) {
+                            acc.push(receita);
+                        }
+                        return acc;
+                    }, []);
+
                 $('#suggestions').empty();
-                sugestoes.slice(0, 5).forEach(receita => {
+                sugestoes.forEach(receita => {
                     $('#suggestions').append(
                         $('<button>')
                             .addClass('list-group-item list-group-item-action')
@@ -243,7 +258,7 @@
             // Lógica do botão de adivinhar
             $('#submit-guess').click(function() {
                 const guess = $('#guess-input').val().trim().toLowerCase();
-                const totalDicas = revealedIngredients + revealedInstructions - 2; // Subtraímos 2 porque começamos com 1 de cada
+                const totalDicas = revealedIngredients + revealedInstructions;
 
                 if (guess === receitaCorreta.toLowerCase()) {
                     const mensagem = gerarMensagemVitoria(totalDicas);
@@ -260,7 +275,7 @@
 
             // Lógica do botão de compartilhar
             $('#share-button').click(function() {
-                const totalDicas = revealedIngredients + revealedInstructions - 2;
+                const totalDicas = revealedIngredients + revealedInstructions;
                 compartilharResultado(totalDicas);
             });
         });

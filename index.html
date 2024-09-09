@@ -69,7 +69,11 @@
     <div class="container-fluid py-3 py-sm-5">
         <h1 class="text-center mb-4 mb-sm-5 animate__animated animate__bounceInDown">
             <i class="fas fa-utensils me-2"></i>Adivinhe a Receita!
+            <button id="comoJogarBtn" class="btn btn-info mb-3">
+                <i class="fas fa-question-circle me-2"></i>Como Jogar
+            </button>
         </h1>
+   
         
         <div id="game-container" class="game-card p-3 p-sm-4 mx-auto" style="max-width: 800px;">
             <h2 class="mb-3">
@@ -105,6 +109,32 @@
             </button>
         </div>
     </div>
+
+    <!-- Modal Como Jogar -->
+<div class="modal fade" id="comoJogarModal" tabindex="-1" aria-labelledby="comoJogarModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="comoJogarModalLabel">Como Jogar</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body">
+          <ol>
+            <li>Uma receita aleatória será escolhida.</li>
+            <li>Inicialmente, um ingrediente e uma instrução serão revelados.</li>
+            <li>Clique nos ingredientes e instruções ocultos para revelar mais dicas.</li>
+            <li>Digite sua resposta no campo de texto e clique em "Adivinhar".</li>
+            <li>Se errar, continue tentando e revelando mais dicas.</li>
+            <li>Tente adivinhar com o menor número de dicas e tentativas possível!</li>
+          </ol>
+          <p>Boa sorte e divirta-se descobrindo deliciosas receitas!</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -280,6 +310,22 @@
                 const totalDicas = revealedIngredients + revealedInstructions;
                 compartilharResultado(totalDicas, tentativas);
             });
+
+            // Inicializar o modal
+    var comoJogarModal = new bootstrap.Modal(document.getElementById('comoJogarModal'), {
+        keyboard: false
+    });
+
+    // Abrir o modal quando o botão "Como Jogar" for clicado
+    $('#comoJogarBtn').click(function() {
+        comoJogarModal.show();
+    });
+
+    // Mostrar o modal automaticamente na primeira visita
+    if (!localStorage.getItem('modalVisto')) {
+        comoJogarModal.show();
+        localStorage.setItem('modalVisto', 'true');
+    }
         });
     </script>
 </body>

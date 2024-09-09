@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jogo de Adivinhação de Receitas</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome para ícones -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+    <!-- Animate.css para animações -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            overflow-x: hidden; /* Previne scroll horizontal */
+        }
+        .game-card {
+            background-color: white;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        @media (max-width: 576px) {
+            h1 {
+                font-size: 1.5rem;
+            }
+            h2 {
+                font-size: 1.2rem;
+            }
+            .btn {
+                font-size: 0.9rem;
+            }
+            .container {
+                padding-left: 10px;
+                padding-right: 10px;
+            }
+        }
+        .hidden-item {
+            background-color: #ccc;
+            color: transparent;
+            cursor: pointer;
+            padding: 2px 5px;
+            margin: 2px;
+            border-radius: 3px;
+            display: inline-block;
+        }
+        .hidden-item.revealed {
+            background-color: transparent;
+            color: inherit;
+        }
+        #ingredients .hidden-item {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .counter {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+        #result {
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        #share-button {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid py-3 py-sm-5">
+        <h1 class="text-center mb-4 mb-sm-5 animate__animated animate__bounceInDown">
+            <i class="fas fa-utensils me-2"></i>Adivinhe a Receita!
+        </h1>
+        
+        <div id="game-container" class="game-card p-3 p-sm-4 mx-auto" style="max-width: 800px;">
+            <h2 class="mb-3">
+                <i class="fas fa-carrot me-2"></i>Ingredientes:
+                <span id="ingredients-counter" class="counter"></span>
+            </h2>
+            <ul id="ingredients" class="list-unstyled mb-4"></ul>
+            
+            <h2 class="mb-3">
+                <i class="fas fa-book-open me-2"></i>Modo de Preparo:
+                <span id="instructions-counter" class="counter"></span>
+            </h2>
+            <div id="instructions" class="mb-4"></div>
+            
+            <div id="guess-section" class="mb-3 mb-sm-4">
+                <div class="input-group">
+                    <input type="text" id="guess-input" class="form-control" placeholder="Nome da receita" autocomplete="off">
+                    <button id="submit-guess" class="btn btn-primary">
+                        <i class="fas fa-check me-2 d-none d-sm-inline"></i>Adivinhar
+                    </button>
+                </div>
+                <div id="suggestions" class="list-group mt-2"></div>
+            </div>
+            
+            <p id="result" class="alert d-none"></p>
+            
+            <button id="share-button" class="btn btn-info w-100 mb-3">
+                <i class="fas fa-share-alt me-2"></i>Compartilhar Resultado
+            </button>
+            
+            <button id="new-game" class="btn btn-success w-100">
+                <i class="fas fa-redo me-2"></i>Nova Receita
+            </button>
+        </div>
+    </div>
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            let receitaCorreta = "";
+            let revealedIngredients = 1;
+            let revealedInstructions = 1;
+            let receitas = [];
+
+            // Carregar as receitas do arquivo JSON
+            $.getJSON('recipes.json', function(data) {
+                receitas = data;
+                novoJogo();
+            });
+
+            function obterReceitaAleatoria() {
+                const receitaAleatoria = receitas[Math.floor(Math.random() * receitas.length)];
+                receitaCorreta = receitaAleatoria.title;
+                
+                $('#ingredients').empty();
+                $('#instructions').empty();
+
+                receitaAleatoria.ingredients.forEach((ingrediente, index) => {
+                    $('#ingredients').append(
+                        $('<li>').append(createHiddenElement(ingrediente, true, index === 0))
+                    );
+                });
+
+                receitaAleatoria.instructions.forEach((passo, index) => {
+                    $('#instructions').append(createHiddenElement(passo, false, index === 0)).append('. ');
+                });
+
+                revealedIngredients = 1;
+                revealedInstructions = 1;
+                updateCounter('ingredients-counter', revealedIngredients, receitaAleatoria.ingredients.length);
+                updateCounter('instructions-counter', revealedInstructions, receitaAleatoria.instructions.length);
+            }
+
+            // Função para buscar sugestões
+            function buscarSugestoes(termo) {
+                const sugestoes = receitas.filter(receita => 
+                    receita.title.toLowerCase().includes(termo.toLowerCase())
+                );
+                $('#suggestions').empty();
+                sugestoes.slice(0, 5).forEach(receita => {
+                    $('#suggestions').append(
+                        $('<button>')
+                            .addClass('list-group-item list-group-item-action')
+                            .text(receita.title)
+                            .click(function() {
+                                $('#guess-input').val(receita.title);
+                                $('#suggestions').empty();
+                            })
+                    );
+                });
+            }
+
+            // Evento de input para buscar sugestões
+            $('#guess-input').on('input', function() {
+                const termo = $(this).val().trim();
+                if (termo.length > 2) {
+                    buscarSugestoes(termo);
+                } else {
+                    $('#suggestions').empty();
+                }
+            });
+
+            // Iniciar novo jogo
+            function novoJogo() {
+                obterReceitaAleatoria();
+                $('#result').addClass('d-none');
+                $('#share-button').hide();
+                $('#guess-input').val('');
+                $('#suggestions').empty();
+            }
+
+            // Evento de clique no botão de nova receita
+            $('#new-game').click(novoJogo);
+
+            function updateCounter(counterId, revealed, total) {
+                $(`#${counterId}`).text(`${revealed}/${total} revelados`);
+            }
+
+            // Função para criar elementos ocultos
+            function createHiddenElement(text, isIngredient, isRevealed) {
+                return $('<span>')
+                    .addClass('hidden-item')
+                    .toggleClass('revealed', isRevealed)
+                    .text(text)
+                    .click(function() {
+                        if (!$(this).hasClass('revealed')) {
+                            $(this).addClass('revealed');
+                            if (isIngredient) {
+                                revealedIngredients++;
+                                updateCounter('ingredients-counter', revealedIngredients, $('#ingredients li').length);
+                            } else {
+                                revealedInstructions++;
+                                updateCounter('instructions-counter', revealedInstructions, $('#instructions span').length);
+                            }
+                        }
+                    });
+            }
+
+            // Função para gerar mensagem divertida
+            function gerarMensagemVitoria(totalDicas) {
+                const mensagens = [
+                    `Uau! Você é um verdadeiro chef! Acertou com apenas ${totalDicas} dicas!`,
+                    `Incrível! Seu nariz de chef farejou a receita com ${totalDicas} dicas!`,
+                    `Parabéns! Você desbloqueou o achievement "Adivinhador de Receitas" com ${totalDicas} dicas!`,
+                    `Sensacional! Você leu a mente do chef com apenas ${totalDicas} dicas!`,
+                    `Bravo! Sua intuição culinária está afiada! Acertou com ${totalDicas} dicas!`
+                ];
+                return mensagens[Math.floor(Math.random() * mensagens.length)];
+            }
+
+            // Função para compartilhar resultado
+            function compartilharResultado(totalDicas) {
+                if (navigator.share) {
+                    navigator.share({
+                        title: 'Jogo de Adivinhação de Receitas',
+                        text: `Adivinhei a receita "${receitaCorreta}" com ${totalDicas} dicas! Você consegue fazer melhor?`,
+                        url: window.location.href
+                    }).then(() => {
+                        console.log('Resultado compartilhado com sucesso');
+                    }).catch((error) => {
+                        console.log('Erro ao compartilhar', error);
+                    });
+                } else {
+                    alert('Desculpe, seu navegador não suporta a funcionalidade de compartilhamento.');
+                }
+            }
+
+            // Lógica do botão de adivinhar
+            $('#submit-guess').click(function() {
+                const guess = $('#guess-input').val().trim().toLowerCase();
+                const totalDicas = revealedIngredients + revealedInstructions - 2; // Subtraímos 2 porque começamos com 1 de cada
+
+                if (guess === receitaCorreta.toLowerCase()) {
+                    const mensagem = gerarMensagemVitoria(totalDicas);
+                    $('#result').removeClass('d-none alert-danger')
+                        .addClass('alert-success animate__animated animate__bounceIn')
+                        .text(mensagem);
+                    $('#share-button').show();
+                } else {
+                    $('#result').removeClass('d-none alert-success')
+                        .addClass('alert-danger animate__animated animate__shakeX')
+                        .text('Ops! Tente novamente!');
+                }
+            });
+
+            // Lógica do botão de compartilhar
+            $('#share-button').click(function() {
+                const totalDicas = revealedIngredients + revealedInstructions - 2;
+                compartilharResultado(totalDicas);
+            });
+        });
+    </script>
+</body>
+</html>

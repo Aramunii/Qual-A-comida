@@ -116,6 +116,7 @@
             let revealedIngredients = 0;
             let revealedInstructions = 0;
             let receitas = [];
+            let tentativas = 0; // Novo contador de tentativas
 
             // Carregar as receitas do arquivo JSON hospedado no GitHub
             $.getJSON('https://raw.githubusercontent.com/Aramunii/Qual-A-comida/main/recipes.json', function(data) {
@@ -137,11 +138,12 @@
                 });
 
                 receitaAleatoria.instructions.forEach((passo, index) => {
-                    $('#instructions').append(createHiddenElement(passo, false, index === 0)).append('. ');
+                    $('#instructions').append(createHiddenElement(passo, false, index === 0)).append(' ');
                 });
 
                 revealedIngredients = 1;
                 revealedInstructions = 1;
+                tentativas = 0; // Resetar tentativas para cada nova receita
                 updateCounter('ingredients-counter', revealedIngredients, receitaAleatoria.ingredients.length);
                 updateCounter('instructions-counter', revealedInstructions, receitaAleatoria.instructions.length);
             }
@@ -227,23 +229,22 @@
             }
 
             // Função para gerar mensagem divertida
-            function gerarMensagemVitoria(totalDicas) {
+            function gerarMensagemVitoria(totalDicas, tentativas) {
                 const mensagens = [
-                    `Uau! Você é um verdadeiro chef! Acertou com apenas ${totalDicas} dicas!`,
-                    `Incrível! Seu nariz de chef farejou a receita com ${totalDicas} dicas!`,
-                    `Parabéns! Você desbloqueou o achievement "Adivinhador de Receitas" com ${totalDicas} dicas!`,
-                    `Sensacional! Você leu a mente do chef com apenas ${totalDicas} dicas!`,
-                    `Bravo! Sua intuição culinária está afiada! Acertou com ${totalDicas} dicas!`
+                    `Uau! Você é um verdadeiro chef! Acertou com ${totalDicas} dicas e ${tentativas} tentativa(s)!`,
+                    `Incrível! Seu nariz de chef farejou a receita com ${totalDicas} dicas e ${tentativas} tentativa(s)!`,
+                    `Sensacional! Você leu a mente do chef com ${totalDicas} dicas e ${tentativas} tentativa(s)!`,
+                    `Bravo! Sua intuição culinária está afiada! Acertou com ${totalDicas} dicas e ${tentativas} tentativa(s)!`
                 ];
                 return mensagens[Math.floor(Math.random() * mensagens.length)];
             }
 
             // Função para compartilhar resultado
-            function compartilharResultado(totalDicas) {
+            function compartilharResultado(totalDicas, tentativas) {
                 if (navigator.share) {
                     navigator.share({
                         title: 'Jogo de Adivinhação de Receitas',
-                        text: `Adivinhei a receita "${receitaCorreta}" com ${totalDicas} dicas! Você consegue fazer melhor?`,
+                        text: `Adivinhei a receita "${receitaCorreta}" com ${totalDicas} dicas e ${tentativas} tentativa(s)! Você consegue fazer melhor?`,
                         url: window.location.href
                     }).then(() => {
                         console.log('Resultado compartilhado com sucesso');
@@ -259,9 +260,10 @@
             $('#submit-guess').click(function() {
                 const guess = $('#guess-input').val().trim().toLowerCase();
                 const totalDicas = revealedIngredients + revealedInstructions;
+                tentativas++; // Incrementar o número de tentativas
 
                 if (guess === receitaCorreta.toLowerCase()) {
-                    const mensagem = gerarMensagemVitoria(totalDicas);
+                    const mensagem = gerarMensagemVitoria(totalDicas, tentativas);
                     $('#result').removeClass('d-none alert-danger')
                         .addClass('alert-success animate__animated animate__bounceIn')
                         .text(mensagem);
@@ -269,14 +271,14 @@
                 } else {
                     $('#result').removeClass('d-none alert-success')
                         .addClass('alert-danger animate__animated animate__shakeX')
-                        .text('Ops! Tente novamente!');
+                        .text(`Ops! Tente novamente! (Tentativa ${tentativas})`);
                 }
             });
 
             // Lógica do botão de compartilhar
             $('#share-button').click(function() {
                 const totalDicas = revealedIngredients + revealedInstructions;
-                compartilharResultado(totalDicas);
+                compartilharResultado(totalDicas, tentativas);
             });
         });
     </script>
